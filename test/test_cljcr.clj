@@ -15,10 +15,10 @@
 
 (ns test-cljcr
   (:use [clojure.test]
-        [cljcr]))
+        [cljcr.core]))
 
 (def jackrabbit-repo
-     {org.apache.jackrabbit.core.RepositoryFactoryImpl/REPOSITORY_HOME 
+     {org.apache.jackrabbit.core.RepositoryFactoryImpl/REPOSITORY_HOME
       "repository/repository"
       org.apache.jackrabbit.core.RepositoryFactoryImpl/REPOSITORY_CONF
       "repository/repository.xml"})
@@ -37,9 +37,9 @@
 
 (use-fixtures
   :once
-  (fn [test] 
-    (with-repository jackrabbit-repo 
-      (with-session {:username "username" :password "password"} 
+  (fn [test]
+    (with-repository jackrabbit-repo
+      (with-session {:username "username" :password "password"}
 	(test)))))
 
 (deftest test-descriptors
