@@ -13,13 +13,12 @@
 ;;    See the License for the specific language governing permissions and
 ;;    limitations under the License.
 
-(ns cljcr
-  (:use (clojure.contrib [except :only (throwf)])
-	clojure.test)
+(ns cljcr.core
+  (:use [clojure.contrib.except :only (throwf)])
   (:import (javax.jcr Repository Session Node)))
 
-(def *repo* nil)
-(def *session* nil)
+(def ^:dynamic *repo* nil)
+(def ^:dynamic *session* nil)
 
 (defn repository []
   (or *repo* (throwf "No repository active")))
@@ -38,7 +37,7 @@
     (throwf "Could not load RepositoryFactory implementation")))
 
 (defn credentials
-  [{user :username pass :password}] 
+  [{user :username pass :password}]
   (if user
     (let [pass (if pass (char-array pass))]
       (javax.jcr.SimpleCredentials. user pass))
@@ -54,7 +53,7 @@
 
 (defmacro with-repository
   [repo-params & body]
-  `(with-bindings 
+  `(with-bindings
      {(var *repo*) (get-repository ~repo-params)}
      ~@body))
 
@@ -94,7 +93,7 @@
 (defmacro with-session
   #^{ :doc "Executes body with a new session from the active repository. Param map supports keys :username, :password, :workspace, and :save-changes" }
   [session-params & body]
-  `(with-bindings 
+  `(with-bindings
      {(var *session*) (get-session ~session-params)}
      (let [v# (do ~@body)]
        (if (~session-params :save-changes)
