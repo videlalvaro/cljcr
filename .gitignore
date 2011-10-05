@@ -4,3 +4,4 @@ cljcr.jar
 lib
 classes
 repository
+derby.log
