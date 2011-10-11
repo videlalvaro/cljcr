@@ -8,7 +8,7 @@
 ;;      http://www.apache.org/licenses/LICENSE-2.0
 ;;
 ;;    Unless required by applicable law or agreed to in writing, software
-;;    distributed under the License is distributed on an "AS IS" BASIS,
+;;    distributed under the License is distributed on an "AS IS" BASIS
 ;;    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ;;    See the License for the specific language governing permissions and
 ;;    limitations under the License.
@@ -43,13 +43,21 @@
       (javax.jcr.SimpleCredentials. user pass))
     (javax.jcr.GuestCredentials. )))
 
-(defn get-session
-  ([] (get-session {}))
+(defn get-default-session
+  ([] (get-default-session {}))
   ([{user :username pass :password ws :workspace}]
      (let [creds (credentials {:username user :password pass})]
        (if ws
 	 (. (repository) login creds ws)
 	 (. (repository) login creds)))))
+
+(defn get-session
+  [repo {user :username pass :password ws :workspace}]
+  (let [creds (credentials {:username user :password pass})]
+    (if ws
+      (. repo login creds ws)
+      (. repo login creds))))
+
 
 (defmacro with-repository
   [repo-params & body]
@@ -59,20 +67,25 @@
 
 (defn value
   #^{ :doc "Converts a JCR Value instance to a Clojure value" }
-  [value]
-  (condp = (. value getType)
-    javax.jcr.PropertyType/STRING        (. value getString)
-    javax.jcr.PropertyType/DATE          (. value getDate)
-    javax.jcr.PropertyType/BINARY        (. value getBinary)
-    javax.jcr.PropertyType/DOUBLE        (. value getDouble)
-    javax.jcr.PropertyType/DECIMAL       (. value getDecimal)
-    javax.jcr.PropertyType/LONG          (. value getLong)
-    javax.jcr.PropertyType/BOOLEAN       (. value getBoolean)
-    javax.jcr.PropertyType/NAME          (. value getString)
-    javax.jcr.PropertyType/PATH          (. value getString)
-    javax.jcr.PropertyType/REFERENCE     (. value getString)
-    javax.jcr.PropertyType/WEAKREFERENCE (. value getString)
-    javax.jcr.PropertyType/URI           (. value getString)))
+  [v]
+  (condp = (. v getType)
+      javax.jcr.PropertyType/STRING        (. v getString)
+      javax.jcr.PropertyType/DATE          (. v getDate)
+      javax.jcr.PropertyType/BINARY        (. v getBinary)
+      javax.jcr.PropertyType/DOUBLE        (. v getDouble)
+      javax.jcr.PropertyType/DECIMAL       (. v getDecimal)
+      javax.jcr.PropertyType/LONG          (. v getLong)
+      javax.jcr.PropertyType/BOOLEAN       (. v getBoolean)
+      javax.jcr.PropertyType/NAME          (. v getString)
+      javax.jcr.PropertyType/PATH          (. v getString)
+      javax.jcr.PropertyType/REFERENCE     (. v getString)
+      javax.jcr.PropertyType/WEAKREFERENCE (. v getString)
+      javax.jcr.PropertyType/URI           (. v getString)))
+
+(defn get-property-value [p]
+  (if (.isMultiple p)
+    (map value (. p getValues))
+    (value (. p getValue))))
 
 (defn descriptor
   #^{ :doc "Returns the string value(s) of a repository descriptor." }
@@ -94,7 +107,7 @@
   #^{ :doc "Executes body with a new session from the active repository. Param map supports keys :username, :password, :workspace, and :save-changes" }
   [session-params & body]
   `(with-bindings
-     {(var *session*) (get-session ~session-params)}
+     {(var *session*) (get-default-session ~session-params)}
      (let [v# (do ~@body)]
        (if (~session-params :save-changes)
 	 (save))
@@ -145,6 +158,9 @@
 (defn children [node]
   (iterator-seq (. node getNodes)))
 
+(defn path [v]
+  (.getPath v))
+
 (defn add-node
   #^{ :doc "Adds a new child node with the specified name as a child of the specified parent node, optionally with a primary node type" }
   ([parent name]
@@ -162,3 +178,8 @@
   [parent property-map]
   (doseq [[name value] property-map]
     (. parent setProperty name value)))
+
+(defn get-property-map
+  ([props] (get-property-map props path))
+  ([props key-fun]
+     (into {} (for [p props] [(key-fun p) (get-property-value p)]))))
